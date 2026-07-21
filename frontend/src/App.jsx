@@ -8,7 +8,9 @@ import About from './pages/About';
 import Feedback from './pages/Feedback';
 import './App.css';
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
 
 function App() {
   const [page, setPage] = useState(() => {
@@ -65,17 +67,7 @@ function App() {
       setPage('dashboard');
       return { success: true };
     } catch (err) {
-      console.error("Login API error, trying local sandbox fallback:", err);
-      const users = JSON.parse(localStorage.getItem('explainer_users') || '[]');
-      const foundUser = users.find(u => u.email === credentials.email && u.password === credentials.password);
-      
-      if (foundUser || (credentials.email === 'demo@example.com' && credentials.password === 'password')) {
-        const fallbackUser = foundUser || { id: 'demo-1', username: 'DemoUser', email: 'demo@example.com' };
-        setUser(fallbackUser);
-        localStorage.setItem('explainer_current_user', JSON.stringify(fallbackUser));
-        setPage('dashboard');
-        return { success: true };
-      }
+      console.error("Login API error:", err);
       return { success: false, error: err.message };
     }
   };
@@ -96,18 +88,8 @@ function App() {
       setPage('dashboard');
       return { success: true };
     } catch (err) {
-      console.error("Register API error, saving to local store:", err);
-      const users = JSON.parse(localStorage.getItem('explainer_users') || '[]');
-      if (users.some(u => u.email === userData.email)) {
-        return { success: false, error: 'Email already registered' };
-      }
-      const newUser = { id: Date.now().toString(), ...userData };
-      users.push(newUser);
-      localStorage.setItem('explainer_users', JSON.stringify(users));
-      setUser({ id: newUser.id, username: newUser.username, email: newUser.email });
-      localStorage.setItem('explainer_current_user', JSON.stringify(newUser));
-      setPage('dashboard');
-      return { success: true };
+      console.error("Register API error:", err);
+      return { success: false, error: err.message };
     }
   };
 

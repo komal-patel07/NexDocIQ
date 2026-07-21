@@ -96,13 +96,8 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
         throw new Error("Failed to load stats");
       }
     } catch (err) {
-      console.error("Dashboard stats fetch error, loading client mock fallback:", err);
-      // Fallback
-      if (docId === 'default-2' || (docId && docId.toLowerCase().includes('.pdf'))) {
-        setStats(getMockPdfStats(activePersona));
-      } else {
-        setStats(getMockCsvStats(activePersona));
-      }
+      console.error("Dashboard stats fetch error:", err);
+      setStats(null);
     }
   };
 
@@ -122,9 +117,9 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
         throw new Error("Failed to fetch documents");
       }
     } catch (err) {
-      console.error("Error fetching user documents, falling back to local demo doc:", err);
-      setDocuments(defaultDocs);
-      setActiveDoc(defaultDocs[0]);
+      console.error("Error fetching user documents:", err);
+      setDocuments([]);
+      setActiveDoc(null);
     }
   };
 
@@ -164,12 +159,8 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
         throw new Error(errorData.error || 'Failed to delete');
       }
     } catch (err) {
-      console.error("Delete document failed, filtering locally:", err);
-      const updated = documents.filter(d => d.id !== docId);
-      setDocuments(updated);
-      if (activeDoc && activeDoc.id === docId) {
-        setActiveDoc(updated.length > 0 ? updated[0] : null);
-      }
+      console.error("Delete document failed:", err);
+      alert(err.message || 'Failed to delete');
     } finally {
       setDeleteConfirmDoc(null);
     }
@@ -312,22 +303,12 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
 
       setChatMessages(prev => [...prev, data]);
     } catch (err) {
-      console.error("Chat API error, rendering local fallback:", err);
-      setTimeout(() => {
-        let replyText = '';
-        if (persona === 'student') {
-          replyText = "Think of this like a school class: it lists the math growth points, which is up 12%!";
-        } else if (persona === 'shopkeeper') {
-          replyText = "Regarding our wholesale ledger tab: we completed 148 customer balance payments successfully!";
-        } else {
-          replyText = "Welcome! I have processed the file contents. Ask me anything, and I'll explain it without using complex words!";
-        }
-        setChatMessages(prev => [...prev, {
-          sender: 'ai',
-          text: replyText,
-          date: new Date().toISOString()
-        }]);
-      }, 1000);
+      console.error("Chat API error:", err);
+      setChatMessages(prev => [...prev, {
+        sender: 'ai',
+        text: `Error: Could not connect to AI service. (${err.message})`,
+        date: new Date().toISOString()
+      }]);
     } finally {
       setIsThinking(false);
     }

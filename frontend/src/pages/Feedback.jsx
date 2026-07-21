@@ -27,32 +27,8 @@ export default function Feedback() {
         throw new Error('Failed to load feedback');
       }
     } catch (err) {
-      console.error("Feedback fetch error, loading localStorage defaults:", err);
-      const saved = localStorage.getItem('explainer_feedback');
-      if (saved) {
-        setFeedbacks(JSON.parse(saved));
-      } else {
-        const defaults = [
-          {
-            name: "Sarah Jenkins",
-            email: "sarah@designflow.com",
-            category: "usability",
-            rating: 5,
-            comment: "The UI design is absolutely gorgeous. The dark green gradients and glassmorphism mimic modern SaaS setups perfectly. Super intuitive interface!",
-            date: new Date(Date.now() - 3600000 * 24).toISOString()
-          },
-          {
-            name: "Liam O'Connor",
-            email: "liam@techstack.io",
-            category: "features",
-            rating: 4,
-            comment: "The Document Analyzer is very helpful. Being able to drag in spreadsheets and immediately ask questions in the side chat saved me a lot of auditing time.",
-            date: new Date(Date.now() - 3600000 * 72).toISOString()
-          }
-        ];
-        setFeedbacks(defaults);
-        localStorage.setItem('explainer_feedback', JSON.stringify(defaults));
-      }
+      console.error("Feedback fetch error:", err);
+      setFeedbacks([]);
     }
   };
 
@@ -80,14 +56,9 @@ export default function Feedback() {
         throw new Error('Failed to post feedback to backend');
       }
     } catch (err) {
-      console.error("Feedback post error, updating local storage:", err);
-      const newFeedback = {
-        ...payload,
-        date: new Date().toISOString()
-      };
-      const updated = [newFeedback, ...feedbacks];
-      setFeedbacks(updated);
-      localStorage.setItem('explainer_feedback', JSON.stringify(updated));
+      console.error("Feedback post error:", err);
+      alert("Failed to submit feedback: " + err.message);
+      return; // Do not clear the form on error
     }
 
     // Reset Form
