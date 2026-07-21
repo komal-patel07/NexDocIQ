@@ -98,4 +98,25 @@ mongoose.connection.once("open", async () => {
   }
 });
 
+// ─── Global error handler (MUST be last middleware) ──────────────────────────
+// Catches errors from multer, route handlers, parsers, etc.
+// Always returns JSON so the frontend never gets an empty or HTML response.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  console.error("Unhandled server error:", err);
+
+  // Multer-specific errors (file type rejected, size limit, etc.)
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "File too large. Maximum allowed size is 10 MB." });
+  }
+  if (err.code === "LIMIT_UNEXPECTED_FILE") {
+    return res.status(400).json({ error: "Unexpected file field. Use the field name 'file'." });
+  }
+
+  // Generic fallback — always JSON, never empty body
+  const status  = err.status || err.statusCode || 500;
+  const message = err.message || "Internal server error";
+  res.status(status).json({ error: message });
+});
+
 export default app;

@@ -234,6 +234,9 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
     setUploading(true);
     setUploadProgress(10);
 
+    // Reset the input so the same file can be picked again after an error
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -246,23 +249,37 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
       });
 
       setUploadProgress(80);
+
+      // Always read body as text first — avoids "Unexpected end of JSON input"
+      // when the server returns an empty body or an HTML error page
+      const rawText = await response.text();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        let errorMsg = `Upload failed (HTTP ${response.status})`;
+        try {
+          const errorData = JSON.parse(rawText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (_) {
+          if (rawText.trim()) errorMsg = rawText.trim();
+        }
+        throw new Error(errorMsg);
       }
 
-      const newDoc = await response.json();
+      // Parse the success response
+      const newDoc = JSON.parse(rawText);
       setUploadProgress(100);
-      
+
       setTimeout(() => {
         setDocuments(prev => [newDoc, ...prev]);
         setActiveDoc(newDoc);
         setUploading(false);
       }, 500);
+
     } catch (err) {
       console.error("File upload failed:", err);
       alert("Failed to upload file: " + err.message);
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
