@@ -1,20 +1,15 @@
-import express from "express";
-import cors from "cors";
+import express  from "express";
+import cors     from "cors";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
+import dotenv   from "dotenv";
 import { fileURLToPath } from "url";
-import path from "path";
-import { createRequire } from "module";
 
 dotenv.config();
-
-// ─── ESM helpers ─────────────────────────────────────────────────────────────
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
+// Allow localhost dev ports and any *.vercel.app deployment
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:4173",
@@ -39,15 +34,11 @@ app.use(express.json());
 // ─── Database ─────────────────────────────────────────────────────────────────
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("MongoDB Connected");
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-  });
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 // ─── Health check ─────────────────────────────────────────────────────────────
-app.get("/api/test", (req, res) => {
+app.get("/api/test", (_req, res) => {
   res.json({ message: "Backend is working!" });
 });
 
@@ -62,7 +53,7 @@ app.use("/api/auth",      authRoutes);
 app.use("/api/feedback",  feedbackRoutes);
 app.use("/api/chat",      chatRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/api",           docRoutes);   // /api/upload  /api/documents
+app.use("/api",           docRoutes);  // handles /api/upload and /api/documents
 
 // ─── Seed default feedback on first run ───────────────────────────────────────
 import Feedback from "../backend/models/Feedback.js";
@@ -77,8 +68,7 @@ mongoose.connection.once("open", async () => {
           email: "sarah@designflow.com",
           category: "usability",
           rating: 5,
-          comment:
-            "The UI design is absolutely gorgeous. The dark green gradients and glassmorphism mimic modern SaaS setups perfectly.",
+          comment: "The UI design is absolutely gorgeous. The dark green gradients and glassmorphism mimic modern SaaS setups perfectly.",
           date: new Date(Date.now() - 3600000 * 24),
         },
         {
@@ -86,8 +76,7 @@ mongoose.connection.once("open", async () => {
           email: "liam@techstack.io",
           category: "features",
           rating: 4,
-          comment:
-            "The Document Analyzer is very helpful. Being able to drag in spreadsheets and immediately ask questions saved me a lot of auditing time.",
+          comment: "The Document Analyzer is very helpful. Being able to drag in spreadsheets and immediately ask questions saved me a lot of auditing time.",
           date: new Date(Date.now() - 3600000 * 72),
         },
       ]);
@@ -98,25 +87,38 @@ mongoose.connection.once("open", async () => {
   }
 });
 
-// ─── Global error handler (MUST be last middleware) ──────────────────────────
-// Catches errors from multer, route handlers, parsers, etc.
-// Always returns JSON so the frontend never gets an empty or HTML response.
+// ─── Global error handler (MUST be registered last) ───────────────────────────
+// Catches all errors (multer, parser, DB, etc.) and always returns JSON —
+// so the frontend never receives an empty body or HTML that breaks JSON.parse.
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
-  console.error("Unhandled server error:", err);
+  console.error("Unhandled server error:", err.message || err);
 
-  // Multer-specific errors (file type rejected, size limit, etc.)
   if (err.code === "LIMIT_FILE_SIZE") {
     return res.status(413).json({ error: "File too large. Maximum allowed size is 10 MB." });
   }
   if (err.code === "LIMIT_UNEXPECTED_FILE") {
-    return res.status(400).json({ error: "Unexpected file field. Use the field name 'file'." });
+    return res.status(400).json({ error: "Unexpected file field name. Use 'file'." });
   }
 
-  // Generic fallback — always JSON, never empty body
   const status  = err.status || err.statusCode || 500;
   const message = err.message || "Internal server error";
   res.status(status).json({ error: message });
 });
 
+// ─── Export app for Vercel serverless runtime ─────────────────────────────────
 export default app;
+
+// ─── Local development: start HTTP server when run directly ───────────────────
+// In ESM, import.meta.url is the file URL of THIS module.
+// process.argv[1] is the script Node was told to run.
+// When they match, this file is the entry point → start the HTTP listener.
+// When Vercel imports this file as a serverless handler, they DON'T match → skip listen().
+const isMain = fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`\n  🚀 NexDocIQ backend running at http://localhost:${PORT}`);
+    console.log(`  📡 Health check:  http://localhost:${PORT}/api/test\n`);
+  });
+}

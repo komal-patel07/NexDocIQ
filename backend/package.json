@@ -1,6 +1,7 @@
 {
   "name": "data-explainer-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Backend for Data Explainer",
   "main": "server.js",
   "scripts": {

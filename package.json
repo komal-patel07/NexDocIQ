@@ -5,9 +5,10 @@
   "type": "module",
   "main": "api/index.js",
   "scripts": {
-    "start": "node api/index.js",
-    "dev": "node --env-file=.env api/index.js",
-    "seed": "node backend/seed.js"
+    "start":        "node api/index.js",
+    "dev":          "node api/index.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "seed":         "node backend/seed.js"
   },
   "engines": {
     "node": ">=18"
