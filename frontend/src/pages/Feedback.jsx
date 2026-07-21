@@ -49,11 +49,19 @@ export default function Feedback() {
         body: JSON.stringify(payload)
       });
       
+      const rawText = await response.text();
       if (response.ok) {
         // Reload reviews
         fetchFeedbacks();
       } else {
-        throw new Error('Failed to post feedback to backend');
+        let errorMsg = 'Failed to post feedback to backend';
+        try {
+          const errorData = JSON.parse(rawText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (_) {
+          if (rawText.trim()) errorMsg = rawText.trim();
+        }
+        throw new Error(errorMsg);
       }
     } catch (err) {
       console.error("Feedback post error:", err);
