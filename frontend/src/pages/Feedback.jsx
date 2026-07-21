@@ -19,8 +19,13 @@ export default function Feedback() {
     try {
       const response = await fetch(`${API_BASE}/feedback`);
       if (response.ok) {
-        const data = await response.json();
-        setFeedbacks(data);
+        const rawText = await response.text();
+        try {
+          const data = JSON.parse(rawText);
+          setFeedbacks(data || []);
+        } catch (_) {
+          setFeedbacks([]);
+        }
       } else {
         throw new Error('Failed to load feedback');
       }
