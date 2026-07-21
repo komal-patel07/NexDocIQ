@@ -44,9 +44,9 @@ app.get("/api/test", (_req, res) => {
 
 // ─── DB Connection Guard ──────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  // readyState 1 = connected, 2 = connecting
-  if (mongoose.connection.readyState !== 1 && mongoose.connection.readyState !== 2) {
-    return res.status(503).json({ error: "Backend is running, but the database connection failed. Please check your MongoDB URI and Network Access (IP Whitelist)." });
+  // readyState 1 = connected. We block 0 (disconnected) and 2 (connecting but not ready)
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: "Backend is running, but the database connection failed. Please check your MongoDB URI and Network Access (IP Whitelist) in Atlas." });
   }
   next();
 });
