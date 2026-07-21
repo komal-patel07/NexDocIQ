@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, Send, CheckCircle } from 'lucide-react';
 import './Feedback.css';
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
+
 
 export default function Feedback() {
   const [rating, setRating] = useState(5);

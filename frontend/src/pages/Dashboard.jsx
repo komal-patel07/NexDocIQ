@@ -6,7 +6,11 @@ import {
 } from 'lucide-react';
 import './Dashboard.css';
 
-const API_BASE = "http://localhost:5000/api";
+// In production (Vercel), VITE_API_URL points to the deployed backend.
+// In local dev, Vite proxies /api/* to localhost:5000 so no URL prefix is needed.
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
 
 const defaultDocs = [
   { id: "default-1", name: "demo_sales_data.csv", type: "CSV", size: "1.5 KB" }
@@ -495,7 +499,7 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
             ref={fileInputRef} 
             style={{ display: 'none' }}
             onChange={handleFileChange}
-            accept=".pdf,.docx,.csv,.xml"
+            accept=".pdf,.docx,.csv,.xlsx,.xls,.txt,.json,.xml"
           />
           <div className="sidebar-upload-trigger" onClick={handleUploadClick}>
             {uploading ? `Uploading ${uploadProgress}%` : (

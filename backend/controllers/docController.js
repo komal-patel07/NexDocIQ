@@ -1,5 +1,6 @@
 import fs       from "fs";
 import path     from "path";
+import os       from "os";
 import { fileURLToPath } from "url";
 import Document from "../models/Document.js";
 import { parseFile } from "../utils/parser.js";
@@ -13,6 +14,7 @@ export const uploadFile = async (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
+    // parseFile reads from req.file.path (multer's tmp location in os.tmpdir())
     const text   = await parseFile(req.file);
     const docId  = Date.now().toString();
     const userId = req.body.userId;
@@ -27,9 +29,15 @@ export const uploadFile = async (req, res) => {
       stats: {},
     });
 
-    try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
+    // Clean up the temp file after processing
+    try { fs.unlinkSync(req.file.path); } catch (_) { /* ignore — may already be gone */ }
 
-    res.status(201).json({ id: newDoc.id, name: newDoc.name, type: newDoc.type, size: newDoc.size });
+    res.status(201).json({
+      id:   newDoc.id,
+      name: newDoc.name,
+      type: newDoc.type,
+      size: newDoc.size,
+    });
   } catch (err) {
     console.error("File upload error:", err);
     res.status(500).json({ error: "Failed to process file upload: " + err.message });
