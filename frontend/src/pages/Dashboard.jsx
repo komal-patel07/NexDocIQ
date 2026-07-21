@@ -88,8 +88,12 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
     try {
       const response = await fetch(`${API_BASE}/dashboard/stats?fileId=${docId}&persona=${activePersona}`);
       if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+        const rawText = await response.text();
+        try {
+          setStats(JSON.parse(rawText));
+        } catch (_) {
+          setStats(null);
+        }
       } else {
         throw new Error("Failed to load stats");
       }
@@ -104,12 +108,13 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
     try {
       const response = await fetch(`${API_BASE}/documents?userId=${user.id}`);
       if (response.ok) {
-        const userDocs = await response.json();
-        setDocuments(userDocs);
-        if (userDocs.length > 0) {
-          setActiveDoc(userDocs[0]);
-        } else {
-          setActiveDoc(null);
+        const rawText = await response.text();
+        try {
+          const userDocs = JSON.parse(rawText);
+          setDocuments(userDocs);
+          setActiveDoc(userDocs.length > 0 ? userDocs[0] : null);
+        } catch (_) {
+          throw new Error("Invalid JSON");
         }
       } else {
         throw new Error("Failed to fetch documents");
@@ -153,8 +158,12 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
           setActiveDoc(updated.length > 0 ? updated[0] : null);
         }
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete');
+        const rawText = await response.text();
+        let errMsg = 'Failed to delete';
+        try {
+          errMsg = JSON.parse(rawText).error || errMsg;
+        } catch (_) {}
+        throw new Error(errMsg);
       }
     } catch (err) {
       console.error("Delete document failed:", err);
@@ -300,8 +309,13 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
           fileId: activeDoc ? activeDoc.id : null
         })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      const rawText = await response.text();
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (_) {}
+
+      if (!response.ok) throw new Error(data.error || "Failed to send message");
 
       setChatMessages(prev => [...prev, data]);
     } catch (err) {

@@ -56,7 +56,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials)
       });
-      const data = await response.json();
+      const rawText = await response.text();
+      let data = {};
+      try { data = JSON.parse(rawText); } catch (_) {}
+      
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
@@ -81,7 +84,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
-      const data = await response.json();
+      const rawText = await response.text();
+      let data = {};
+      try { data = JSON.parse(rawText); } catch (_) {}
+      
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');
       }
