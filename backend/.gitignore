@@ -1,0 +1,10 @@
+# Backend-specific ignores (also covered by root .gitignore)
+node_modules/
+.env
+.env.*
+!.env.example
+uploads/
+tmp/
+data/uploads/
+data/*.json
+*.log
