@@ -8,9 +8,7 @@ import './Dashboard.css';
 
 // In production (Vercel), VITE_API_URL points to the deployed backend.
 // In local dev, Vite proxies /api/* to localhost:5000 so no URL prefix is needed.
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+const API_BASE = "/api";
 
 const defaultDocs = [
   { id: "default-1", name: "demo_sales_data.csv", type: "CSV", size: "1.5 KB" }
@@ -271,7 +269,7 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
     } catch (err) {
       console.error("File upload failed:", err);
       let errMsg = err.message;
-      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. Please ensure the server is running.";
+      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. If running locally, check if server is on port 5000.";
       alert("Failed to upload file: " + errMsg);
       setUploading(false);
       setUploadProgress(0);

@@ -31,11 +31,25 @@ app.use(
 
 app.use(express.json());
 
-// ─── Database ─────────────────────────────────────────────────────────────────
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// ─── Database Connection (Serverless-friendly) ────────────────────────────────
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) return;
+  if (!process.env.MONGODB_URI) {
+    console.error("MONGODB_URI is not defined in environment variables.");
+    return;
+  }
+  try {
+    const db = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    isConnected = db.connections[0].readyState === 1;
+    console.log("MongoDB Connected (Serverless)");
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+  }
+};
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/test", (_req, res) => {
@@ -43,10 +57,13 @@ app.get("/api/test", (_req, res) => {
 });
 
 // ─── DB Connection Guard ──────────────────────────────────────────────────────
-app.use((req, res, next) => {
-  // readyState 1 = connected. We block 0 (disconnected) and 2 (connecting but not ready)
+app.use(async (req, res, next) => {
+  await connectDB();
+  
   if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ error: "Backend is running, but the database connection failed. Please check your MongoDB URI and Network Access (IP Whitelist) in Atlas." });
+    return res.status(503).json({ 
+      error: "Backend is running, but the database connection failed. Please check your MONGODB_URI in Vercel settings and Network Access (IP Whitelist) in Atlas." 
+    });
   }
   next();
 });

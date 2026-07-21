@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, Send, CheckCircle } from 'lucide-react';
 import './Feedback.css';
 
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+const API_BASE = "/api";
 
 
 export default function Feedback() {
@@ -66,7 +64,7 @@ export default function Feedback() {
     } catch (err) {
       console.error("Feedback post error:", err);
       let errMsg = err.message;
-      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. Please ensure the server is running on port 5000.";
+      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. If running locally, check if server is on port 5000.";
       alert("Failed to submit feedback: " + errMsg);
       return; // Do not clear the form on error
     }

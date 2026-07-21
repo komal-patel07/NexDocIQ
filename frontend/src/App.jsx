@@ -8,9 +8,7 @@ import About from './pages/About';
 import Feedback from './pages/Feedback';
 import './App.css';
 
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+const API_BASE = "/api";
 
 function App() {
   const [page, setPage] = useState(() => {
@@ -70,7 +68,7 @@ function App() {
       console.error("Login API error:", err);
       let errorMessage = err.message;
       if (errorMessage === "Failed to fetch") {
-        errorMessage = "Backend connection failed. Please ensure the server is running on port 5000.";
+        errorMessage = "Backend connection failed. If running locally, check if server is on port 5000.";
       }
       return { success: false, error: errorMessage };
     }
@@ -95,7 +93,7 @@ function App() {
       console.error("Register API error:", err);
       let errorMessage = err.message;
       if (errorMessage === "Failed to fetch") {
-        errorMessage = "Backend connection failed. Please ensure the server is running on port 5000.";
+        errorMessage = "Backend connection failed. If running locally, check if server is on port 5000.";
       }
       return { success: false, error: errorMessage };
     }
