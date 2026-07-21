@@ -160,7 +160,9 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
       }
     } catch (err) {
       console.error("Delete document failed:", err);
-      alert(err.message || 'Failed to delete');
+      let errMsg = err.message || 'Failed to delete';
+      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. Is the server running?";
+      alert(errMsg);
     } finally {
       setDeleteConfirmDoc(null);
     }
@@ -268,7 +270,9 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
 
     } catch (err) {
       console.error("File upload failed:", err);
-      alert("Failed to upload file: " + err.message);
+      let errMsg = err.message;
+      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. Please ensure the server is running.";
+      alert("Failed to upload file: " + errMsg);
       setUploading(false);
       setUploadProgress(0);
     }
@@ -304,9 +308,11 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
       setChatMessages(prev => [...prev, data]);
     } catch (err) {
       console.error("Chat API error:", err);
+      let errMsg = err.message;
+      if (errMsg === "Failed to fetch") errMsg = "Backend server is unreachable.";
       setChatMessages(prev => [...prev, {
         sender: 'ai',
-        text: `Error: Could not connect to AI service. (${err.message})`,
+        text: `Error: Could not connect to AI service. (${errMsg})`,
         date: new Date().toISOString()
       }]);
     } finally {

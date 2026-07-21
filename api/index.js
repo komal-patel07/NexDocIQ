@@ -42,6 +42,15 @@ app.get("/api/test", (_req, res) => {
   res.json({ message: "Backend is working!" });
 });
 
+// ─── DB Connection Guard ──────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  // readyState 1 = connected, 2 = connecting
+  if (mongoose.connection.readyState !== 1 && mongoose.connection.readyState !== 2) {
+    return res.status(503).json({ error: "Backend is running, but the database connection failed. Please check your MongoDB URI and Network Access (IP Whitelist)." });
+  }
+  next();
+});
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 import authRoutes      from "../backend/routes/authRoutes.js";
 import feedbackRoutes  from "../backend/routes/feedbackRoutes.js";

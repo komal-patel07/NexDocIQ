@@ -68,7 +68,11 @@ function App() {
       return { success: true };
     } catch (err) {
       console.error("Login API error:", err);
-      return { success: false, error: err.message };
+      let errorMessage = err.message;
+      if (errorMessage === "Failed to fetch") {
+        errorMessage = "Backend connection failed. Please ensure the server is running on port 5000.";
+      }
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -89,7 +93,11 @@ function App() {
       return { success: true };
     } catch (err) {
       console.error("Register API error:", err);
-      return { success: false, error: err.message };
+      let errorMessage = err.message;
+      if (errorMessage === "Failed to fetch") {
+        errorMessage = "Backend connection failed. Please ensure the server is running on port 5000.";
+      }
+      return { success: false, error: errorMessage };
     }
   };
 

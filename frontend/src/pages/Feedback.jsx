@@ -57,7 +57,9 @@ export default function Feedback() {
       }
     } catch (err) {
       console.error("Feedback post error:", err);
-      alert("Failed to submit feedback: " + err.message);
+      let errMsg = err.message;
+      if (errMsg === "Failed to fetch") errMsg = "Backend connection failed. Please ensure the server is running on port 5000.";
+      alert("Failed to submit feedback: " + errMsg);
       return; // Do not clear the form on error
     }
 
