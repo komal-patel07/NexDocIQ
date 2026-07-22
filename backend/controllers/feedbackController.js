@@ -2,33 +2,90 @@ import Feedback from "../models/Feedback.js";
 
 export const getFeedback = async (req, res) => {
   try {
-    const feedback = await Feedback.find().sort({ date: -1 });
-    res.json(feedback);
+    const feedback = await Feedback
+      .find()
+      .sort({ date: -1 });
+
+    return res.status(200).json(feedback);
+
   } catch (err) {
-    console.error("Fetch feedback error:", err);
-    res.status(500).json({ error: "Failed to retrieve feedback list" });
+    console.error(
+      "Fetch feedback error:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to retrieve feedback list",
+    });
   }
 };
 
+
 export const postFeedback = async (req, res) => {
   try {
-    const { name, email, category, rating, comment } = req.body;
-    if (!name || !email || !comment || !rating) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
+    console.log(
+      "Feedback request received:",
+      req.body
+    );
 
-    const newFeedback = await Feedback.create({
+    const {
       name,
       email,
-      category: category || "features",
-      rating: parseInt(rating),
+      category,
+      rating,
       comment,
-      date: new Date(),
+    } = req.body;
+
+    // Validate required fields
+    if (
+      !name ||
+      !email ||
+      !comment ||
+      rating === undefined ||
+      rating === null
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Name, email, rating and comment are required",
+      });
+    }
+
+    const newFeedback =
+      await Feedback.create({
+        name: name.trim(),
+        email: email.trim(),
+        category:
+          category || "features",
+        rating: Number(rating),
+        comment: comment.trim(),
+        date: new Date(),
+      });
+
+    console.log(
+      "Feedback created:",
+      newFeedback
+    );
+
+    return res.status(201).json({
+      success: true,
+      message:
+        "Feedback submitted successfully",
+      feedback: newFeedback,
     });
 
-    res.status(201).json(newFeedback);
   } catch (err) {
-    console.error("Submit feedback error:", err);
-    res.status(500).json({ error: "Failed to submit feedback" });
+    console.error(
+      "Submit feedback error:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      error:
+        err.message ||
+        "Failed to submit feedback",
+    });
   }
 };
