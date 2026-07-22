@@ -1,3 +1,14 @@
+import Feedback from "../models/Feedback.js";
+
+export const getFeedback = async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find().sort({ date: -1 });
+    res.json(feedbacks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const postFeedback = async (req, res) => {
   try {
     console.log("Feedback request received:", req.body);
