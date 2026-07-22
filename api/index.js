@@ -3,11 +3,11 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-import authRoutes from "../backend/routes/authRoutes.js";
-import feedbackRoutes from "../backend/routes/feedbackRoutes.js";
-import chatRoutes from "../backend/routes/chatRoutes.js";
-import dashboardRoutes from "../backend/routes/dashboardRoutes.js";
-import docRoutes from "../backend/routes/docRoutes.js";
+import authRoutes from "../routes/authRoutes.js";
+import feedbackRoutes from "../routes/feedbackRoutes.js";
+import chatRoutes from "../routes/chatRoutes.js";
+import dashboardRoutes from "../routes/dashboardRoutes.js";
+import docRoutes from "../routes/docRoutes.js";
 
 dotenv.config();
 
@@ -32,7 +32,7 @@ app.use(
         return callback(null, true);
       }
 
-      // Allow configured frontend URL
+      // Allow configured frontend
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -65,22 +65,20 @@ app.use(
   })
 );
 
-
 // ======================================================
 // BODY PARSER
 // ======================================================
 
 app.use(express.json());
 
-
 // ======================================================
-// DATABASE CONNECTION
+// MONGODB CONNECTION
 // ======================================================
 
 let isConnected = false;
 
 const connectDB = async () => {
-  // Already connected
+  // Reuse existing connection in Vercel serverless
   if (
     isConnected &&
     mongoose.connection.readyState === 1
@@ -88,9 +86,10 @@ const connectDB = async () => {
     return;
   }
 
+  // Check environment variable
   if (!process.env.MONGODB_URI) {
     throw new Error(
-      "MONGODB_URI is not defined in Vercel environment variables"
+      "MONGODB_URI is not defined in Vercel Environment Variables"
     );
   }
 
@@ -98,7 +97,7 @@ const connectDB = async () => {
     const db = await mongoose.connect(
       process.env.MONGODB_URI,
       {
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 10000,
       }
     );
 
@@ -106,45 +105,88 @@ const connectDB = async () => {
       db.connections[0].readyState === 1;
 
     console.log(
-      "MongoDB connected successfully"
+      "MongoDB Atlas connected successfully"
     );
 
   } catch (error) {
     isConnected = false;
 
     console.error(
-      "MongoDB connection error:",
-      error
+      "MongoDB Atlas connection error:",
+      error.message
     );
 
     throw error;
   }
 };
 
-
 // ======================================================
-// HEALTH CHECK
+// BACKEND HEALTH CHECK
 // ======================================================
 
 app.get("/api/test", async (req, res) => {
   try {
-    await connectDB();
-
     return res.status(200).json({
       success: true,
       message: "NexDocIQ Backend is working!",
-      database: "MongoDB connected",
     });
 
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Backend is running but database connection failed",
       error: error.message,
     });
   }
 });
 
+// ======================================================
+// MONGODB ATLAS CONNECTION CHECK
+// ======================================================
+
+app.get("/api/test-db", async (req, res) => {
+  try {
+    // Try connecting to MongoDB Atlas
+    await connectDB();
+
+    // Check actual Mongoose connection state
+    const isMongoConnected =
+      mongoose.connection.readyState === 1;
+
+    if (!isMongoConnected) {
+      return res.status(503).json({
+        success: false,
+        message: "MongoDB Atlas is not connected",
+        readyState:
+          mongoose.connection.readyState,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "MongoDB Atlas connected successfully",
+      database:
+        mongoose.connection.name,
+      host:
+        mongoose.connection.host,
+      readyState:
+        mongoose.connection.readyState,
+    });
+
+  } catch (error) {
+    console.error(
+      "MongoDB health check failed:",
+      error
+    );
+
+    return res.status(503).json({
+      success: false,
+      message:
+        "MongoDB Atlas connection failed",
+      error: error.message,
+    });
+  }
+});
 
 // ======================================================
 // DATABASE CONNECTION MIDDLEWARE
@@ -153,64 +195,51 @@ app.get("/api/test", async (req, res) => {
 app.use(async (req, res, next) => {
   try {
     await connectDB();
+
     next();
 
   } catch (error) {
     console.error(
       "Database middleware error:",
-      error
+      error.message
     );
 
     return res.status(503).json({
       success: false,
       error:
-        "Database connection failed. Check MONGODB_URI and MongoDB Atlas Network Access.",
+        "Database connection failed. Check MONGODB_URI in Vercel and MongoDB Atlas Network Access.",
     });
   }
 });
-
 
 // ======================================================
 // API ROUTES
 // ======================================================
 
-// Authentication
 app.use(
   "/api/auth",
   authRoutes
 );
 
-
-// Feedback
 app.use(
   "/api/feedback",
   feedbackRoutes
 );
 
-
-// Chat
 app.use(
   "/api/chat",
   chatRoutes
 );
 
-
-// Dashboard
 app.use(
   "/api/dashboard",
   dashboardRoutes
 );
 
-
-// Documents
-// Handles:
-// POST /api/upload
-// GET  /api/documents
 app.use(
   "/api",
   docRoutes
 );
-
 
 // ======================================================
 // API 404 HANDLER
@@ -226,10 +255,8 @@ app.use(
   }
 );
 
-
 // ======================================================
 // GLOBAL ERROR HANDLER
-// MUST BE LAST
 // ======================================================
 
 app.use(
@@ -239,22 +266,22 @@ app.use(
       err
     );
 
-    // File too large
     if (
       err.code === "LIMIT_FILE_SIZE"
     ) {
       return res.status(413).json({
+        success: false,
         error:
           "File too large. Maximum allowed size is 10 MB.",
       });
     }
 
-    // Unexpected file
     if (
       err.code ===
       "LIMIT_UNEXPECTED_FILE"
     ) {
       return res.status(400).json({
+        success: false,
         error:
           "Unexpected file field name. Use 'file'.",
       });
@@ -273,7 +300,6 @@ app.use(
     });
   }
 );
-
 
 // ======================================================
 // EXPORT FOR VERCEL
