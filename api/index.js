@@ -21,6 +21,8 @@ app.use(
   cors({
     origin: true,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -33,8 +35,9 @@ app.use(express.json());
 let cachedConnection = null;
 
 const connectDB = async () => {
-  if (cachedConnection) {
-    return cachedConnection;
+  // Already connected
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
   }
 
   if (!process.env.MONGODB_URI) {
@@ -43,13 +46,24 @@ const connectDB = async () => {
     );
   }
 
-  cachedConnection = await mongoose.connect(
-    process.env.MONGODB_URI
+  // Reuse existing connection promise
+  if (!cachedConnection) {
+    cachedConnection = mongoose.connect(
+      process.env.MONGODB_URI,
+      {
+        serverSelectionTimeoutMS: 10000,
+      }
+    );
+  }
+
+  await cachedConnection;
+
+  console.log(
+    "MongoDB Atlas connected:",
+    mongoose.connection.name
   );
 
-  console.log("MongoDB Atlas connected");
-
-  return cachedConnection;
+  return mongoose.connection;
 };
 
 // ==========================================
@@ -71,19 +85,16 @@ app.get("/api/test-db", async (req, res) => {
   try {
     await connectDB();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "MongoDB Atlas connected successfully",
       database: mongoose.connection.name,
       readyState: mongoose.connection.readyState,
     });
   } catch (error) {
-    console.error(
-      "MongoDB connection error:",
-      error
-    );
+    console.error("MongoDB connection error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "MongoDB Atlas connection failed",
       error: error.message,
@@ -100,14 +111,12 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (error) {
-    console.error(
-      "Database middleware error:",
-      error
-    );
+    console.error("Database middleware error:", error);
 
-    res.status(503).json({
+    return res.status(503).json({
       success: false,
       error: "Database connection failed",
+      details: error.message,
     });
   }
 });
@@ -116,57 +125,42 @@ app.use(async (req, res, next) => {
 // API ROUTES
 // ==========================================
 
-app.use(
-  "/api/auth",
-  authRoutes
-);
+app.use("/api/auth", authRoutes);
 
-app.use(
-  "/api/feedback",
-  feedbackRoutes
-);
+app.use("/api/feedback", feedbackRoutes);
 
-app.use(
-  "/api/chat",
-  chatRoutes
-);
+app.use("/api/chat", chatRoutes);
 
-app.use(
-  "/api/dashboard",
-  dashboardRoutes
-);
+app.use("/api/dashboard", dashboardRoutes);
 
-app.use(
-  "/api",
-  docRoutes
-);
+app.use("/api", docRoutes);
 
 // ==========================================
-// 404
+// API 404
 // ==========================================
 
-app.use((req, res) => {
-  res.status(404).json({
+app.use("/api", (req, res) => {
+  return res.status(404).json({
     success: false,
-    error: `Route not found: ${req.method} ${req.originalUrl}`,
+    error: `API route not found: ${req.method} ${req.originalUrl}`,
   });
 });
 
 // ==========================================
-// ERROR HANDLER
+// GLOBAL ERROR HANDLER
 // ==========================================
 
 app.use((err, req, res, next) => {
   console.error("API Error:", err);
 
-  res.status(500).json({
+  return res.status(err.status || 500).json({
     success: false,
     error: err.message || "Internal Server Error",
   });
 });
 
 // ==========================================
-// VERCEL EXPORT
+// VERCEL SERVERLESS EXPORT
 // ==========================================
 
 export default app;
