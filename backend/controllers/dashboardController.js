@@ -227,10 +227,14 @@ You must return EXACTLY a JSON object with the following structure (do NOT wrap 
 
       return res.json(parsedStats);
     } catch (err) {
-      console.error("Gemini stats generation failed, falling back to mock:", err);
+      console.error("Gemini stats generation failed:", err);
+      return res.status(500).json({ 
+        error: "Failed to generate dynamic stats using Gemini. Please check your GEMINI_API_KEY." 
+      });
     }
   }
 
+  // Only return mock data for the default demo files
   const isPdf = fileId === "default-2" || (fileId && fileId.toLowerCase().includes(".pdf"));
-  res.json(isPdf ? getMockPdfStats(activePersona) : getMockCsvStats(activePersona));
+  return res.json(isPdf ? getMockPdfStats(activePersona) : getMockCsvStats(activePersona));
 };

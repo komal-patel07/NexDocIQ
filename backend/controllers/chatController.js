@@ -40,46 +40,11 @@ Answer the user's question contextually based on the file content and active per
     const responseText = await callGeminiRaw(message, systemInstruction, false);
     return res.json({ sender: "ai", text: responseText, date: new Date().toISOString() });
   } catch (err) {
-    console.error("Gemini chat failed, falling back to mock:", err);
+    console.error("Gemini chat failed:", err);
+    let errorMessage = "Sorry, I could not analyze the document due to an error.";
+    if (err.message.includes("401") || err.message.includes("UNAUTHENTICATED") || err.message.includes("API_KEY")) {
+      errorMessage = "⚠️ **Action Required**: Your Gemini API Key is invalid or expired. The backend failed to connect to Google's AI service. Please generate a new key starting with `AIzaSy...` at Google AI Studio and update your environment variables!";
+    }
+    return res.json({ sender: "ai", text: errorMessage, date: new Date().toISOString() });
   }
-
-  // ── Fallback mock responses ─────────────────────────────────────────────────
-  const msg = message.toLowerCase();
-  let responseText = "";
-
-  if (activePersona === "student") {
-    if (msg.includes("forecast") || msg.includes("revenue") || msg.includes("quarter")) {
-      responseText = "We are on track to make **$2.6M** next quarter! Think of this as getting 12% more allowance than last quarter. Most of this growth comes from schools upgrading their subscription packages. We are 96% sure of this outcome, which is like scoring an A on a test!";
-    } else if (msg.includes("risk") || msg.includes("flagged") || msg.includes("accounts") || msg.includes("anomalies")) {
-      responseText = "There are **3 key accounts** flagged as 'at-risk':\n- **Lena Harper** (project delayed)\n- **Sophie Kim** (waiting on their team to reply)\n- **AlphaTech** (their principal manager left)\n\nWe need to reach out to them just like a study partner check-in!";
-    } else {
-      responseText = "I've analyzed our strategy paper! Reading ease is **optimal (82%)** which makes it very simple to study. Ask me any hard terms, and I will explain them with a school-project analogy!";
-    }
-  } else if (activePersona === "shopkeeper") {
-    if (msg.includes("forecast") || msg.includes("revenue") || msg.includes("quarter")) {
-      responseText = "Our sales projection next quarter looks solid at **$2.6M**, showing a **12.6% increase** in business. That's like selling 12 additional crates of produce for every 100 crates sold last month!";
-    } else if (msg.includes("risk") || msg.includes("flagged") || msg.includes("accounts") || msg.includes("anomalies")) {
-      responseText = "We have **3 client accounts** showing warning signs:\n- **Lena Harper** (order details pending, $125 tab)\n- **Sophie Kim** (invoice waiting on payment, $320 tab)\n- **AlphaTech** (their head buyer changed, worth $1.2M)\n\nI recommend calling them to clear their credit tab.";
-    } else {
-      responseText = "I've read through the sales invoice log sheet. The general numbers look clean: total revenue is **$2.84M** (+18% Vs last month). No major inventory discrepancies detected!";
-    }
-  } else if (activePersona === "business") {
-    if (msg.includes("forecast") || msg.includes("revenue") || msg.includes("quarter")) {
-      responseText = "Q3 forecasts indicate **$2.6M in revenue** (a **12.6% expansion** QoQ) with a **96.8% confidence interval**. The primary driver is expansion bookings and acceleration in our EMEA pipeline velocity.";
-    } else if (msg.includes("risk") || msg.includes("flagged") || msg.includes("accounts") || msg.includes("anomalies")) {
-      responseText = "A total of **23 contract opportunities** are currently flagged at-risk:\n- **InfluxMedia** ($125 contract delay)\n- **CreatorHive** ($320 account pending review)\n- **AlphaTech** ($1.2M pipeline value at risk)\n\nRecommend establishing immediate executive touchpoints.";
-    } else {
-      responseText = "Data summary completed. Q2 transactions reflect **$2.84M in revenue** and **82% pipeline health index**.";
-    }
-  } else {
-    if (msg.includes("forecast") || msg.includes("revenue") || msg.includes("quarter")) {
-      responseText = "We expect to earn **$2.6M** next quarter, which is about **12% higher** than last quarter. We are very sure of this number (96% confidence) because our client signups have been very steady.";
-    } else if (msg.includes("risk") || msg.includes("flagged") || msg.includes("accounts") || msg.includes("anomalies")) {
-      responseText = "We have marked **3 accounts** that need attention:\n- **Lena Harper** (project steps are moving slowly)\n- **Sophie Kim** (invoice is waiting to be paid)\n- **AlphaTech** (the main person we talk to has left)\n\nIt is best to drop them a friendly message to check how we can help.";
-    } else {
-      responseText = "Welcome! I've explained the loaded document. The writing is **very simple** (grade-school level) with a **positive tone (76%)**. Ask me anything, and I'll explain it without using complex industry words!";
-    }
-  }
-
-  res.json({ sender: "ai", text: responseText, date: new Date().toISOString() });
 };
