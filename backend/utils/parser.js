@@ -4,18 +4,21 @@ import xlsx from "xlsx";
 import mammoth from "mammoth";
 import { createRequire } from "module";
 
+// pdf-parse is CommonJS
 const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
 
 export default async function parseFile(file) {
   const filePath = file.path;
-  const ext = path.extname(file.originalname).toLowerCase();
+  const ext = path
+    .extname(file.originalname)
+    .toLowerCase();
 
   let contentText = "";
 
   try {
     // ==========================================
-    // TEXT / JSON / CSV / XML
+    // TXT / JSON / CSV / XML
     // ==========================================
 
     if (
@@ -37,18 +40,17 @@ export default async function parseFile(file) {
         file.originalname
       );
 
-      const dataBuffer = fs.readFileSync(
-        filePath
-      );
+      const dataBuffer =
+        fs.readFileSync(filePath);
 
-      const parsed = await pdfParse(
-        dataBuffer
-      );
+      const parsed =
+        await pdfParse(dataBuffer);
 
-      contentText = parsed.text || "";
+      contentText =
+        parsed.text || "";
 
       console.log(
-        "PDF parsed successfully."
+        "PDF parsed successfully"
       );
 
       console.log(
@@ -100,7 +102,8 @@ export default async function parseFile(file) {
         }
       );
 
-      contentText = sheetText;
+      contentText =
+        sheetText;
     }
 
     // ==========================================
@@ -117,14 +120,14 @@ export default async function parseFile(file) {
 
     return contentText;
 
-  } catch (err) {
+  } catch (error) {
     console.error(
       `Failed to parse file "${file.originalname}":`,
-      err
+      error
     );
 
     throw new Error(
-      `Failed to parse file "${file.originalname}": ${err.message}`
+      `Failed to parse file "${file.originalname}": ${error.message}`
     );
   }
 }
