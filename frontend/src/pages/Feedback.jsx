@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Star,
@@ -9,117 +8,89 @@ import {
 import "./Feedback.css";
 
 // ========================================
-// VERCEL API BASE URL
-// ========================================
-// If frontend and backend are on the same
-// Vercel domain, use /api.
-//
-// Example:
-// https://your-app.vercel.app/api/feedback
-//
-// If VITE_API_URL exists, it will use that.
-// Otherwise, it uses /api.
+// BACKEND API URL
 // ========================================
 
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api`
-  : "/api";
+  : "http://localhost:5000/api";
 
+console.log("API_BASE:", API_BASE);
 
 export default function Feedback() {
-  // ========================================
-  // STATES
-  // ========================================
-
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-
-  const [category, setCategory] =
-    useState("features");
-
+  const [category, setCategory] = useState("features");
   const [comment, setComment] = useState("");
 
-  const [feedbacks, setFeedbacks] =
-    useState([]);
-
-  const [submitted, setSubmitted] =
-    useState(false);
-
-  const [loading, setLoading] =
-    useState(false);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // ========================================
-  // GET FEEDBACKS
+  // GET ALL FEEDBACK
+  // GET /api/feedback
   // ========================================
 
   const fetchFeedbacks = async () => {
     try {
-      console.log(
-        "Fetching feedback from:",
-        `${API_BASE}/feedback`
-      );
+      const url = `${API_BASE}/feedback`;
 
-      const response = await fetch(
-        `${API_BASE}/feedback`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      console.log("Fetching feedback:", url);
 
-      // Get response as text first
-      // This prevents:
-      // Unexpected token '<'
-      const rawText =
-        await response.text();
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-      console.log(
-        "Feedback API status:",
-        response.status
-      );
+      const text = await response.text();
 
-      console.log(
-        "Feedback API response:",
-        rawText
-      );
+      console.log("GET status:", response.status);
+      console.log("GET response:", text);
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load feedback. Status: ${response.status}`
-        );
-      }
-
-      // Convert response to JSON
       let data;
 
       try {
-        data = JSON.parse(rawText);
+        data = text ? JSON.parse(text) : {};
       } catch (error) {
         console.error(
-          "Response is not valid JSON:",
-          rawText
+          "Backend returned invalid JSON:",
+          text
         );
 
         throw new Error(
-          "Backend returned an invalid response. Check your Vercel API route."
+          "Backend returned an invalid response."
         );
       }
 
-      setFeedbacks(
-        Array.isArray(data)
-          ? data
-          : data.feedback || []
-      );
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            data.message ||
+            `GET request failed with status ${response.status}`
+        );
+      }
 
-    } catch (err) {
+      // Your backend currently returns:
+      // res.json(feedback)
+
+      if (Array.isArray(data)) {
+        setFeedbacks(data);
+      } else if (Array.isArray(data.feedback)) {
+        setFeedbacks(data.feedback);
+      } else {
+        setFeedbacks([]);
+      }
+
+    } catch (error) {
       console.error(
         "Feedback fetch error:",
-        err
+        error
       );
 
       setFeedbacks([]);
@@ -128,7 +99,7 @@ export default function Feedback() {
 
 
   // ========================================
-  // LOAD FEEDBACK WHEN PAGE OPENS
+  // LOAD FEEDBACK ON PAGE LOAD
   // ========================================
 
   useEffect(() => {
@@ -138,12 +109,12 @@ export default function Feedback() {
 
   // ========================================
   // SUBMIT FEEDBACK
+  // POST /api/feedback
   // ========================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form
     if (
       !name.trim() ||
       !email.trim() ||
@@ -167,82 +138,61 @@ export default function Feedback() {
     try {
       setLoading(true);
 
+      const url = `${API_BASE}/feedback`;
+
       console.log(
         "Submitting feedback to:",
-        `${API_BASE}/feedback`
+        url
       );
 
       console.log(
-        "Feedback payload:",
+        "Payload:",
         payload
       );
 
-      // ========================================
-      // POST REQUEST
-      // ========================================
+      const response = await fetch(url, {
+        method: "POST",
 
-      const response = await fetch(
-        `${API_BASE}/feedback`,
-        {
-          method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
 
-          headers: {
-            "Content-Type":
-              "application/json",
+        body: JSON.stringify(payload),
+      });
 
-            Accept:
-              "application/json",
-          },
-
-          body: JSON.stringify(
-            payload
-          ),
-        }
-      );
-
-      // Get response as text first
-      const rawText =
-        await response.text();
+      const text = await response.text();
 
       console.log(
-        "POST response status:",
+        "POST status:",
         response.status
       );
 
       console.log(
         "POST response:",
-        rawText
+        text
       );
-
-      // ========================================
-      // PARSE RESPONSE
-      // ========================================
 
       let data = {};
 
-      if (rawText.trim()) {
-        try {
-          data = JSON.parse(rawText);
-        } catch (error) {
-          console.error(
-            "Backend returned non-JSON:",
-            rawText
-          );
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (error) {
+        console.error(
+          "Invalid JSON response:",
+          text
+        );
 
-          throw new Error(
-            "Backend returned HTML or invalid data instead of JSON. Check your Vercel API configuration."
-          );
-        }
+        throw new Error(
+          "Backend returned HTML or invalid JSON."
+        );
       }
 
-      // ========================================
-      // CHECK RESPONSE
-      // ========================================
-
+      // Handle backend errors
       if (!response.ok) {
         throw new Error(
-          data?.error ||
-            data?.message ||
+          data.error ||
+            data.message ||
             `Backend request failed with status ${response.status}`
         );
       }
@@ -252,40 +202,34 @@ export default function Feedback() {
         data
       );
 
-      // ========================================
-      // REFRESH FEEDBACK LIST
-      // ========================================
-
+      // Refresh feedback list
       await fetchFeedbacks();
 
-      // ========================================
-      // RESET FORM
-      // ========================================
-
+      // Reset form
       setName("");
       setEmail("");
       setCategory("features");
       setRating(5);
       setComment("");
 
-      // Show success message
+      // Show success
       setSubmitted(true);
 
-      // Hide success message
       setTimeout(() => {
         setSubmitted(false);
       }, 5000);
 
-    } catch (err) {
+    } catch (error) {
       console.error(
         "Feedback post error:",
-        err
+        error
       );
 
       alert(
-        "Failed to submit feedback: " +
-          (err.message ||
-            "Something went wrong")
+        `Failed to submit feedback: ${
+          error.message ||
+          "Something went wrong"
+        }`
       );
 
     } finally {
@@ -293,18 +237,17 @@ export default function Feedback() {
     }
   };
 
-
   // ========================================
-  // CALCULATE AVERAGE RATING
+  // AVERAGE RATING
   // ========================================
 
   const avgRating =
     feedbacks.length > 0
       ? (
           feedbacks.reduce(
-            (acc, curr) =>
-              acc +
-              Number(curr.rating || 0),
+            (total, feedback) =>
+              total +
+              Number(feedback.rating || 0),
             0
           ) / feedbacks.length
         ).toFixed(1)
@@ -322,11 +265,6 @@ export default function Feedback() {
         padding: "80px 24px",
       }}
     >
-
-      {/* ====================================
-          PAGE HEADER
-      ==================================== */}
-
       <div
         style={{
           textAlign: "center",
@@ -339,35 +277,33 @@ export default function Feedback() {
         </span>
 
         <h1
+          className="text-gradient"
           style={{
             fontSize: "42px",
             fontWeight: "700",
             marginBottom: "16px",
           }}
-          className="text-gradient"
         >
           What our users say
         </h1>
 
         <p
           style={{
-            color:
-              "var(--text-secondary)",
+            color: "var(--text-secondary)",
           }}
         >
           Help us improve NexDocIQ.
           Share your rating, report
-          suggestions, or request
-          features directly below.
+          suggestions, or request features
+          directly below.
         </p>
       </div>
 
-
       <div className="feedback-layout">
 
-        {/* ==================================
-            LEFT SIDE
-        ================================== */}
+        {/* ====================================
+            FEEDBACK FORM
+        ==================================== */}
 
         <div className="glass-panel feedback-form-card">
 
@@ -387,8 +323,6 @@ export default function Feedback() {
               <p>
                 Thank you for helping us
                 make NexDocIQ better.
-                Your comments are
-                appreciated.
               </p>
 
               <button
@@ -428,9 +362,6 @@ export default function Feedback() {
                 future updates.
               </p>
 
-
-              {/* Name + Email */}
-
               <div className="form-row-grid">
 
                 <div className="form-group">
@@ -445,14 +376,11 @@ export default function Feedback() {
                     placeholder="Jane Doe"
                     value={name}
                     onChange={(e) =>
-                      setName(
-                        e.target.value
-                      )
+                      setName(e.target.value)
                     }
                   />
 
                 </div>
-
 
                 <div className="form-group">
 
@@ -466,16 +394,13 @@ export default function Feedback() {
                     placeholder="jane@company.com"
                     value={email}
                     onChange={(e) =>
-                      setEmail(
-                        e.target.value
-                      )
+                      setEmail(e.target.value)
                     }
                   />
 
                 </div>
 
               </div>
-
 
               {/* Rating */}
 
@@ -516,11 +441,9 @@ export default function Feedback() {
                         }
                         className="star-btn"
                         style={{
-                          background:
-                            "none",
+                          background: "none",
                           border: "none",
-                          cursor:
-                            "pointer",
+                          cursor: "pointer",
                           padding: 0,
                         }}
                       >
@@ -528,10 +451,8 @@ export default function Feedback() {
                         <Star
                           size={24}
                           className={
-                            (
-                              hoverRating ||
-                              rating
-                            ) >= star
+                            (hoverRating ||
+                              rating) >= star
                               ? "star-icon filled"
                               : "star-icon"
                           }
@@ -545,7 +466,6 @@ export default function Feedback() {
                 </div>
 
               </div>
-
 
               {/* Comment */}
 
@@ -561,16 +481,11 @@ export default function Feedback() {
                   placeholder="Tell us what you liked, or where we can improve..."
                   value={comment}
                   onChange={(e) =>
-                    setComment(
-                      e.target.value
-                    )
+                    setComment(e.target.value)
                   }
                 />
 
               </div>
-
-
-              {/* Submit Button */}
 
               <button
                 type="submit"
@@ -578,11 +493,8 @@ export default function Feedback() {
                 disabled={loading}
                 style={{
                   width: "100%",
-                  justifyContent:
-                    "center",
-                  opacity: loading
-                    ? 0.7
-                    : 1,
+                  justifyContent: "center",
+                  opacity: loading ? 0.7 : 1,
                 }}
               >
 
@@ -597,15 +509,14 @@ export default function Feedback() {
               </button>
 
             </form>
-
           )}
 
         </div>
 
 
-        {/* ==================================
-            RIGHT SIDE
-        ================================== */}
+        {/* ====================================
+            FEEDBACK DISPLAY
+        ==================================== */}
 
         <div className="feedback-display-panel">
 
@@ -636,7 +547,6 @@ export default function Feedback() {
               {avgRating}
             </div>
 
-
             <div>
 
               <h4
@@ -652,8 +562,7 @@ export default function Feedback() {
                 style={{
                   display: "flex",
                   gap: "4px",
-                  margin:
-                    "4px 0 8px",
+                  margin: "4px 0 8px",
                 }}
               >
 
@@ -664,9 +573,7 @@ export default function Feedback() {
                       key={star}
                       size={14}
                       className={
-                        parseFloat(
-                          avgRating
-                        ) >= star
+                        Number(avgRating) >= star
                           ? "star-icon filled"
                           : "star-icon"
                       }
@@ -693,7 +600,6 @@ export default function Feedback() {
 
           </div>
 
-
           {/* Recent Reviews */}
 
           <div className="feedback-feed-header">
@@ -705,22 +611,21 @@ export default function Feedback() {
             <MessageSquare
               size={16}
               style={{
-                color:
-                  "var(--text-muted)",
+                color: "var(--text-muted)",
               }}
             />
 
           </div>
 
-
           <div className="feedback-feed-scroll">
 
             {feedbacks.map(
-              (f, i) => (
+              (feedback, index) => (
 
                 <div
                   key={
-                    f._id || i
+                    feedback._id ||
+                    index
                   }
                   className="glass-panel feedback-feed-item"
                 >
@@ -732,8 +637,7 @@ export default function Feedback() {
                         "space-between",
                       alignItems:
                         "flex-start",
-                      marginBottom:
-                        "10px",
+                      marginBottom: "10px",
                     }}
                   >
 
@@ -747,18 +651,17 @@ export default function Feedback() {
                             "var(--text-primary)",
                         }}
                       >
-                        {f.name}
+                        {feedback.name}
                       </h5>
 
                       <span className="feedback-item-category">
                         {(
-                          f.category ||
+                          feedback.category ||
                           "features"
                         ).toUpperCase()}
                       </span>
 
                     </div>
-
 
                     <div
                       style={{
@@ -775,7 +678,7 @@ export default function Feedback() {
                             size={12}
                             className={
                               Number(
-                                f.rating
+                                feedback.rating
                               ) >= star
                                 ? "star-icon filled"
                                 : "star-icon"
@@ -789,7 +692,6 @@ export default function Feedback() {
 
                   </div>
 
-
                   <p
                     style={{
                       color:
@@ -798,9 +700,8 @@ export default function Feedback() {
                       lineHeight: 1.5,
                     }}
                   >
-                    {f.comment}
+                    {feedback.comment}
                   </p>
-
 
                   <div
                     style={{
@@ -811,15 +712,14 @@ export default function Feedback() {
                         "var(--text-muted)",
                     }}
                   >
-                    {f.date
+                    {feedback.date
                       ? new Date(
-                          f.date
+                          feedback.date
                         ).toLocaleDateString()
                       : ""}
                   </div>
 
                 </div>
-
               )
             )}
 
@@ -828,7 +728,6 @@ export default function Feedback() {
         </div>
 
       </div>
-
     </div>
   );
 }
