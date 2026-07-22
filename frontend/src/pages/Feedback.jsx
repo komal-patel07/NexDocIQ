@@ -1,6 +1,6 @@
 const API_BASE = "/api";
 
-const fetchFeedbacks = async () => {
+export default   async function fetchFeedbacks(){
   try {
     const response = await fetch(`${API_BASE}/feedback`);
 
