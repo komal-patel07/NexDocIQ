@@ -61,9 +61,20 @@ export default function Feedback() {
           text
         );
 
-        throw new Error(
-          "Backend returned an invalid response."
-        );
+        if (!response.ok) {
+  console.error("GET API error response:", data);
+
+  const errorMessage =
+    typeof data === "string"
+      ? data
+      : data?.error ||
+        data?.message ||
+        JSON.stringify(data);
+
+  throw new Error(
+    `GET ${response.status}: ${errorMessage}`
+  );
+}
       }
 
       if (!response.ok) {
@@ -188,12 +199,19 @@ export default function Feedback() {
 
       // Handle backend errors
       if (!response.ok) {
-        throw new Error(
-          data.error ||
-            data.message ||
-            `Backend request failed with status ${response.status}`
-        );
-      }
+  console.error("POST API error response:", data);
+
+  const errorMessage =
+    typeof data === "string"
+      ? data
+      : data?.error ||
+        data?.message ||
+        JSON.stringify(data);
+
+  throw new Error(
+    `POST ${response.status}: ${errorMessage}`
+  );
+}
 
       console.log(
         "Feedback submitted successfully:",
