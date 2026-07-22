@@ -1,33 +1,6 @@
-import Feedback from "../models/Feedback.js";
-
-export const getFeedback = async (req, res) => {
-  try {
-    const feedback = await Feedback
-      .find()
-      .sort({ date: -1 });
-
-    return res.status(200).json(feedback);
-
-  } catch (err) {
-    console.error(
-      "Fetch feedback error:",
-      err
-    );
-
-    return res.status(500).json({
-      success: false,
-      error: "Failed to retrieve feedback list",
-    });
-  }
-};
-
-
 export const postFeedback = async (req, res) => {
   try {
-    console.log(
-      "Feedback request received:",
-      req.body
-    );
+    console.log("Feedback request received:", req.body);
 
     const {
       name,
@@ -37,7 +10,6 @@ export const postFeedback = async (req, res) => {
       comment,
     } = req.body;
 
-    // Validate required fields
     if (
       !name ||
       !email ||
@@ -46,46 +18,28 @@ export const postFeedback = async (req, res) => {
       rating === null
     ) {
       return res.status(400).json({
-        success: false,
-        error:
-          "Name, email, rating and comment are required",
+        error: "Name, email, comment and rating are required",
       });
     }
 
-    const newFeedback =
-      await Feedback.create({
-        name: name.trim(),
-        email: email.trim(),
-        category:
-          category || "features",
-        rating: Number(rating),
-        comment: comment.trim(),
-        date: new Date(),
-      });
-
-    console.log(
-      "Feedback created:",
-      newFeedback
-    );
-
-    return res.status(201).json({
-      success: true,
-      message:
-        "Feedback submitted successfully",
-      feedback: newFeedback,
+    const newFeedback = await Feedback.create({
+      name: name.trim(),
+      email: email.trim(),
+      category: category || "features",
+      rating: Number(rating),
+      comment: comment.trim(),
+      date: new Date(),
     });
 
+    console.log("Feedback saved:", newFeedback);
+
+    return res.status(201).json(newFeedback);
+
   } catch (err) {
-    console.error(
-      "Submit feedback error:",
-      err
-    );
+    console.error("REAL FEEDBACK ERROR:", err);
 
     return res.status(500).json({
-      success: false,
-      error:
-        err.message ||
-        "Failed to submit feedback",
+      error: err.message,
     });
   }
 };
