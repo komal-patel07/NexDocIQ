@@ -8,7 +8,7 @@ import About from './pages/About';
 import Feedback from './pages/Feedback';
 import './App.css';
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` : "/api";
 
 function App() {
   const [page, setPage] = useState(() => {

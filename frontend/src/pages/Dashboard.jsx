@@ -8,7 +8,7 @@ import './Dashboard.css';
 
 // In production (Vercel), VITE_API_URL points to the deployed backend.
 // In local dev, Vite proxies /api/* to localhost:5000 so no URL prefix is needed.
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` : "/api";
 
 const defaultDocs = [
   { id: "default-1", name: "demo_sales_data.csv", type: "CSV", size: "1.5 KB" }

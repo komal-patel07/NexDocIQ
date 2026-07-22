@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, Send, CheckCircle } from 'lucide-react';
 import './Feedback.css';
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` : "/api";
 
 
 export default function Feedback() {
