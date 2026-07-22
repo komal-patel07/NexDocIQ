@@ -1,6 +1,9 @@
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
 export async function callGeminiRaw(prompt, systemInstruction = "", formatJson = false) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is missing from environment variables.");
+  }
+  
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
 
   const body = {
