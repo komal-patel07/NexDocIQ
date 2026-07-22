@@ -1,15 +1,22 @@
-import express  from "express";
-import cors     from "cors";
+import express from "express";
+import cors from "cors";
 import mongoose from "mongoose";
-import dotenv   from "dotenv";
-import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+import authRoutes from "../routes/authRoutes.js";
+import feedbackRoutes from "../routes/feedbackRoutes.js";
+import chatRoutes from "../routes/chatRoutes.js";
+import dashboardRoutes from "../routes/dashboardRoutes.js";
+import docRoutes from "../routes/docRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-// Allow localhost dev ports and any *.vercel.app deployment
+// ======================================================
+// CORS
+// ======================================================
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:4173",
@@ -19,132 +26,257 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: origin ${origin} not allowed`));
+      // Allow requests without origin
+      // Example: Postman, server-to-server
+      if (!origin) {
+        return callback(null, true);
       }
+
+      // Allow configured frontend URL
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow Vercel frontend deployments
+      if (origin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(`CORS: origin ${origin} not allowed`)
+      );
     },
+
     credentials: true,
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   })
 );
 
+
+// ======================================================
+// BODY PARSER
+// ======================================================
+
 app.use(express.json());
 
-// ─── Database Connection (Serverless-friendly) ────────────────────────────────
+
+// ======================================================
+// DATABASE CONNECTION
+// ======================================================
+
 let isConnected = false;
 
 const connectDB = async () => {
-  if (isConnected) return;
-  if (!process.env.MONGODB_URI) {
-    console.error("MONGODB_URI is not defined in environment variables.");
+  // Already connected
+  if (
+    isConnected &&
+    mongoose.connection.readyState === 1
+  ) {
     return;
   }
+
+  if (!process.env.MONGODB_URI) {
+    throw new Error(
+      "MONGODB_URI is not defined in Vercel environment variables"
+    );
+  }
+
   try {
-    const db = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    isConnected = db.connections[0].readyState === 1;
-    console.log("MongoDB Connected (Serverless)");
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
+    const db = await mongoose.connect(
+      process.env.MONGODB_URI,
+      {
+        serverSelectionTimeoutMS: 5000,
+      }
+    );
+
+    isConnected =
+      db.connections[0].readyState === 1;
+
+    console.log(
+      "MongoDB connected successfully"
+    );
+
+  } catch (error) {
+    isConnected = false;
+
+    console.error(
+      "MongoDB connection error:",
+      error
+    );
+
+    throw error;
   }
 };
 
-// ─── Health check ─────────────────────────────────────────────────────────────
-app.get("/api/test", (_req, res) => {
-  res.json({ message: "Backend is working!" });
-});
 
-// ─── DB Connection Guard ──────────────────────────────────────────────────────
-app.use(async (req, res, next) => {
-  await connectDB();
-  
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ 
-      error: "Backend is running, but the database connection failed. Please check your MONGODB_URI in Vercel settings and Network Access (IP Whitelist) in Atlas." 
+// ======================================================
+// HEALTH CHECK
+// ======================================================
+
+app.get("/api/test", async (req, res) => {
+  try {
+    await connectDB();
+
+    return res.status(200).json({
+      success: true,
+      message: "NexDocIQ Backend is working!",
+      database: "MongoDB connected",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Backend is running but database connection failed",
+      error: error.message,
     });
   }
-  next();
 });
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
-import authRoutes      from "../backend/routes/authRoutes.js";
-import feedbackRoutes  from "../backend/routes/feedbackRoutes.js";
-import chatRoutes      from "../backend/routes/chatRoutes.js";
-import dashboardRoutes from "../backend/routes/dashboardRoutes.js";
-import docRoutes       from "../backend/routes/docRoutes.js";
 
-app.use("/api/auth",      authRoutes);
-app.use("/api/feedback",  feedbackRoutes);
-app.use("/api/chat",      chatRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api",           docRoutes);  // handles /api/upload and /api/documents
+// ======================================================
+// DATABASE CONNECTION MIDDLEWARE
+// ======================================================
 
-// ─── Seed default feedback on first run ───────────────────────────────────────
-import Feedback from "../backend/models/Feedback.js";
-
-mongoose.connection.once("open", async () => {
+app.use(async (req, res, next) => {
   try {
-    const count = await Feedback.countDocuments();
-    if (count === 0) {
-      await Feedback.insertMany([
-        {
-          name: "Sarah Jenkins",
-          email: "sarah@designflow.com",
-          category: "usability",
-          rating: 5,
-          comment: "The UI design is absolutely gorgeous. The dark green gradients and glassmorphism mimic modern SaaS setups perfectly.",
-          date: new Date(Date.now() - 3600000 * 24),
-        },
-        {
-          name: "Liam O'Connor",
-          email: "liam@techstack.io",
-          category: "features",
-          rating: 4,
-          comment: "The Document Analyzer is very helpful. Being able to drag in spreadsheets and immediately ask questions saved me a lot of auditing time.",
-          date: new Date(Date.now() - 3600000 * 72),
-        },
-      ]);
-      console.log("Default feedbacks seeded.");
+    await connectDB();
+    next();
+
+  } catch (error) {
+    console.error(
+      "Database middleware error:",
+      error
+    );
+
+    return res.status(503).json({
+      success: false,
+      error:
+        "Database connection failed. Check MONGODB_URI and MongoDB Atlas Network Access.",
+    });
+  }
+});
+
+
+// ======================================================
+// API ROUTES
+// ======================================================
+
+// Authentication
+app.use(
+  "/api/auth",
+  authRoutes
+);
+
+
+// Feedback
+app.use(
+  "/api/feedback",
+  feedbackRoutes
+);
+
+
+// Chat
+app.use(
+  "/api/chat",
+  chatRoutes
+);
+
+
+// Dashboard
+app.use(
+  "/api/dashboard",
+  dashboardRoutes
+);
+
+
+// Documents
+// Handles:
+// POST /api/upload
+// GET  /api/documents
+app.use(
+  "/api",
+  docRoutes
+);
+
+
+// ======================================================
+// API 404 HANDLER
+// ======================================================
+
+app.use(
+  "/api",
+  (req, res) => {
+    return res.status(404).json({
+      success: false,
+      error: `API route not found: ${req.method} ${req.originalUrl}`,
+    });
+  }
+);
+
+
+// ======================================================
+// GLOBAL ERROR HANDLER
+// MUST BE LAST
+// ======================================================
+
+app.use(
+  (err, req, res, next) => {
+    console.error(
+      "Unhandled server error:",
+      err
+    );
+
+    // File too large
+    if (
+      err.code === "LIMIT_FILE_SIZE"
+    ) {
+      return res.status(413).json({
+        error:
+          "File too large. Maximum allowed size is 10 MB.",
+      });
     }
-  } catch (err) {
-    console.error("Seeding error:", err);
+
+    // Unexpected file
+    if (
+      err.code ===
+      "LIMIT_UNEXPECTED_FILE"
+    ) {
+      return res.status(400).json({
+        error:
+          "Unexpected file field name. Use 'file'.",
+      });
+    }
+
+    const status =
+      err.status ||
+      err.statusCode ||
+      500;
+
+    return res.status(status).json({
+      success: false,
+      error:
+        err.message ||
+        "Internal server error",
+    });
   }
-});
+);
 
-// ─── Global error handler (MUST be registered last) ───────────────────────────
-// Catches all errors (multer, parser, DB, etc.) and always returns JSON —
-// so the frontend never receives an empty body or HTML that breaks JSON.parse.
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, _next) => {
-  console.error("Unhandled server error:", err.message || err);
 
-  if (err.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({ error: "File too large. Maximum allowed size is 10 MB." });
-  }
-  if (err.code === "LIMIT_UNEXPECTED_FILE") {
-    return res.status(400).json({ error: "Unexpected file field name. Use 'file'." });
-  }
+// ======================================================
+// EXPORT FOR VERCEL
+// ======================================================
 
-  const status  = err.status || err.statusCode || 500;
-  const message = err.message || "Internal server error";
-  res.status(status).json({ error: message });
-});
-
-// ─── Export app for Vercel serverless runtime ─────────────────────────────────
 export default app;
-
-// ─── Local development: start HTTP server when run directly ───────────────────
-// In ESM, import.meta.url is the file URL of THIS module.
-// process.argv[1] is the script Node was told to run.
-// When they match, this file is the entry point → start the HTTP listener.
-// When Vercel imports this file as a serverless handler, they DON'T match → skip listen().
-const isMain = fileURLToPath(import.meta.url) === process.argv[1];
-if (isMain) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`\n  🚀 NexDocIQ backend running at http://localhost:${PORT}`);
-    console.log(`  📡 Health check:  http://localhost:${PORT}/api/test\n`);
-  });
-}
