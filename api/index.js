@@ -21,8 +21,6 @@ app.use(
   cors({
     origin: true,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -34,37 +32,47 @@ app.use(express.json());
 
 let cachedConnection = null;
 
-const connectDB = async () => {
-  // Already connected
-  if (mongoose.connection.readyState === 1) {
-    return mongoose.connection;
-  }
+async function connectDB() {
+  try {
+    // Already connected
+    if (mongoose.connection.readyState === 1) {
+      console.log("MongoDB already connected");
+      return mongoose.connection;
+    }
 
-  if (!process.env.MONGODB_URI) {
-    throw new Error(
-      "MONGODB_URI is missing from Vercel Environment Variables"
-    );
-  }
+    // Check environment variable
+    if (!process.env.MONGODB_URI) {
+      throw new Error(
+        "MONGODB_URI is missing from Vercel Environment Variables"
+      );
+    }
 
-  // Reuse existing connection promise
-  if (!cachedConnection) {
-    cachedConnection = mongoose.connect(
+    console.log("Connecting to MongoDB...");
+
+    cachedConnection = await mongoose.connect(
       process.env.MONGODB_URI,
       {
         serverSelectionTimeoutMS: 10000,
       }
     );
+
+    console.log(
+      "MongoDB connected:",
+      mongoose.connection.name
+    );
+
+    return cachedConnection;
+
+  } catch (error) {
+
+    console.error(
+      "MongoDB connection failed:",
+      error.message
+    );
+
+    throw error;
   }
-
-  await cachedConnection;
-
-  console.log(
-    "MongoDB Atlas connected:",
-    mongoose.connection.name
-  );
-
-  return mongoose.connection;
-};
+}
 
 // ==========================================
 // BACKEND HEALTH CHECK
@@ -83,6 +91,7 @@ app.get("/api/test", (req, res) => {
 
 app.get("/api/test-db", async (req, res) => {
   try {
+
     await connectDB();
 
     return res.status(200).json({
@@ -91,8 +100,13 @@ app.get("/api/test-db", async (req, res) => {
       database: mongoose.connection.name,
       readyState: mongoose.connection.readyState,
     });
+
   } catch (error) {
-    console.error("MongoDB connection error:", error);
+
+    console.error(
+      "MongoDB health check failed:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -107,11 +121,19 @@ app.get("/api/test-db", async (req, res) => {
 // ==========================================
 
 app.use(async (req, res, next) => {
+
   try {
+
     await connectDB();
+
     next();
+
   } catch (error) {
-    console.error("Database middleware error:", error);
+
+    console.error(
+      "Database middleware error:",
+      error
+    );
 
     return res.status(503).json({
       success: false,
@@ -119,48 +141,71 @@ app.use(async (req, res, next) => {
       details: error.message,
     });
   }
+
 });
 
 // ==========================================
 // API ROUTES
 // ==========================================
 
-app.use("/api/auth", authRoutes);
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-app.use("/api/feedback", feedbackRoutes);
+app.use(
+  "/api/feedback",
+  feedbackRoutes
+);
 
-app.use("/api/chat", chatRoutes);
+app.use(
+  "/api/chat",
+  chatRoutes
+);
 
-app.use("/api/dashboard", dashboardRoutes);
+app.use(
+  "/api/dashboard",
+  dashboardRoutes
+);
 
-app.use("/api", docRoutes);
+app.use(
+  "/api",
+  docRoutes
+);
 
 // ==========================================
-// API 404
+// 404
 // ==========================================
 
-app.use("/api", (req, res) => {
+app.use((req, res) => {
+
   return res.status(404).json({
     success: false,
-    error: `API route not found: ${req.method} ${req.originalUrl}`,
+    error: `Route not found: ${req.method} ${req.originalUrl}`,
   });
+
 });
 
 // ==========================================
-// GLOBAL ERROR HANDLER
+// ERROR HANDLER
 // ==========================================
 
 app.use((err, req, res, next) => {
-  console.error("API Error:", err);
 
-  return res.status(err.status || 500).json({
+  console.error(
+    "API ERROR:",
+    err
+  );
+
+  return res.status(500).json({
     success: false,
     error: err.message || "Internal Server Error",
   });
+
 });
 
 // ==========================================
-// VERCEL SERVERLESS EXPORT
+// VERCEL EXPORT
 // ==========================================
 
 export default app;
