@@ -4,7 +4,7 @@ import xlsx from "xlsx";
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
 
-export async function parseFile(file) {
+export default async function parseFile(file) {
   const filePath = file.path;
   const ext = path.extname(file.originalname).toLowerCase();
 
