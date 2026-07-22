@@ -111,8 +111,14 @@ export default function Dashboard({ user, persona, onPersonaChange }) {
         const rawText = await response.text();
         try {
           const userDocs = JSON.parse(rawText);
-          setDocuments(userDocs);
-          setActiveDoc(userDocs.length > 0 ? userDocs[0] : null);
+          if (userDocs.length > 0) {
+            setDocuments(userDocs);
+            setActiveDoc(userDocs[0]);
+          } else {
+            // Keep the default dummy data for demo purposes if they have no uploads yet
+            setDocuments(defaultDocs);
+            setActiveDoc(defaultDocs[0]);
+          }
         } catch (_) {
           throw new Error("Invalid JSON");
         }
