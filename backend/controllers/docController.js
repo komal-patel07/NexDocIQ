@@ -3,7 +3,7 @@ import path     from "path";
 import os       from "os";
 import { fileURLToPath } from "url";
 import Document from "../models/Document.js";
-import { parseFile } from "../utils/parser.js";
+import  parseFile  from "../utils/parser.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
